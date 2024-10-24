@@ -1,5 +1,5 @@
-const { authentication, restrictTo } = require("../controller/authController");
-const { getAllUser } = require("../controller/userController");
+const { authentication, restrictTo } = require("../controller/auth.controller");
+const { getAllUser } = require("../controller/user.controller");
 const catchAsync = require("../utils/catchAsync");
 
 const router = require("express").Router();

@@ -1,5 +1,5 @@
-const { authentication, restrictTo } = require("../controller/authController");
-const projectController = require("../controller/projectController");
+const { authentication, restrictTo } = require("../controller/auth.controller");
+const projectController = require("../controller/project.controller");
 const { validateProject } = require("../validators/project.validator");
 const catchAsync = require("../utils/catchAsync"); // Importing catchAsync
 

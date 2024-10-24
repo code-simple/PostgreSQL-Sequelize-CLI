@@ -2,7 +2,7 @@ const user = require("../db/models/user");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const AppError = require("../utils/appError");
-const { sendWhatsAppMessage } = require("../service/utils/utils.service");
+const { sendWhatsAppMessage } = require("../service/util.service");
 
 const generateToken = (payload) => {
   return jwt.sign(payload, process.env.JWT_SECRET_KEY, {
@@ -19,14 +19,7 @@ const signup = async (req, res, next) => {
       throw new AppError("Invalid user Type", 400);
     }
 
-    const newUser = await user.create({
-      userType: body.userType,
-      firstName: body.firstName,
-      lastName: body.lastName,
-      email: body.email,
-      password: body.password,
-      confirmPassword: body.confirmPassword,
-    });
+    const newUser = await user.create(req.body);
 
     if (!newUser) {
       return next(new AppError("Failed to create the user", 400));
