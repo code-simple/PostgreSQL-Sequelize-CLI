@@ -1,8 +1,8 @@
-const { authentication, restrictTo } = require('../controller/authController');
-const { getAllUser } = require('../controller/userController');
+const { authentication, restrictTo } = require("../controller/authController");
+const { getAllUser } = require("../controller/userController");
 
-const router = require('express').Router();
+const router = require("express").Router();
 
-router.route('/').get(authentication, restrictTo('0'), getAllUser);
+router.route("/").get(authentication, getAllUser);
 
 module.exports = router;

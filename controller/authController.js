@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
+const { sendWhatsAppMessage } = require("../service/utils/utils.service");
 
 const generateToken = (payload) => {
   return jwt.sign(payload, process.env.JWT_SECRET_KEY, {
@@ -54,6 +55,9 @@ const login = catchAsync(async (req, res, next) => {
 
   const result = await user.findOne({ where: { email } });
   if (!result || !(await bcrypt.compare(password, result.password))) {
+    await sendWhatsAppMessage(
+      "Login Failed: Check someone is hacking your account"
+    );
     return next(new AppError("Incorrect email or password", 401));
   }
 

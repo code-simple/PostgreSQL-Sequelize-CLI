@@ -37,3 +37,54 @@ Install my-project with npm
   npm run migrate
   npm run seed:all
 ```
+
+# PostgreSQL integration in EC2:
+
+### Allow firewall:
+
+```bash
+  sudo ufw status
+  sudo ufw allow 5432/tcp
+```
+
+Installation:
+
+```bash
+sudo apt install postgresql postgresql-contrib -y
+```
+
+### Start the PostgreSQL
+
+```bash
+sudo systemctl start postgresql
+sudo systemctl enable PostgreSQL
+sudo -i -u postgres
+psql
+```
+
+### Create Database:
+
+```bash
+CREATE DATABASE mydatabase;
+CREATE USER myuser WITH ENCRYPTED PASSWORD 'mypassword';
+GRANT ALL PRIVILEGES ON DATABASE mydatabase TO imran;
+\q
+```
+
+### Configure PostgreSQL:
+
+```bash
+sudo nano /etc/postgresql/14/main/postgresql.conf
+uncomment : listen_addresses = '*'
+sudo nano /etc/postgresql/14/main/pg_hba.conf
+host    all             all             0.0.0.0/0               md5
+```
+
+### Restart PostgreSQL :
+
+```bash
+sudo systemctl restart PostgreSQL
+sudo tail -f /var/log/postgresql/postgresql-<version>-main.log
+```
+
+Replace <version> with the one using.
