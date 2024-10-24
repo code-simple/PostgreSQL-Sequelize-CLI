@@ -47,7 +47,7 @@ Install my-project with npm
   sudo ufw allow 5432/tcp
 ```
 
-Installation:
+### Installation:
 
 ```bash
 sudo apt install postgresql postgresql-contrib -y
