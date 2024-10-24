@@ -67,7 +67,7 @@ psql
 ```bash
 CREATE DATABASE mydatabase;
 CREATE USER myuser WITH ENCRYPTED PASSWORD 'mypassword';
-GRANT ALL PRIVILEGES ON DATABASE mydatabase TO imran;
+GRANT ALL PRIVILEGES ON DATABASE mydatabase TO myuser;
 \q
 ```
 
@@ -87,4 +87,4 @@ sudo systemctl restart PostgreSQL
 sudo tail -f /var/log/postgresql/postgresql-<version>-main.log
 ```
 
-Replace <version> with the one using.
+Replace `version` with the one using.
