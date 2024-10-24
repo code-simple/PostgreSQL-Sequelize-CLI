@@ -1,90 +1,76 @@
-const project = require("../db/models/project");
-const user = require("../db/models/user");
+const Project = require("../db/models/project");
+const User = require("../db/models/user");
 const AppError = require("../utils/appError");
-const catchAsync = require("../utils/catchAsync");
+const STATUS = require("../utils/messages");
 
-const createProject = catchAsync(async (req, res, next) => {
-  const body = req.body;
-  const userId = req.user.id;
-  const newProject = await project.create({
-    title: body.title,
-    productImage: body.productImage,
-    price: body.price,
-    shortDescription: body.shortDescription,
-    description: body.description,
-    productUrl: body.productUrl,
-    category: body.category,
-    tags: body.tags,
-    createdBy: userId,
-  });
-
-  return res.status(201).json({
+// Create a new project
+const createProject = async (req, res, next) => {
+  const newProject = await Project.create(req.body);
+  res.status(201).json({
     status: "success",
     data: newProject,
   });
-});
+};
 
-const getAllProject = catchAsync(async (req, res, next) => {
+// Get all projects for a user
+const getAllProject = async (req, res, next) => {
   const userId = req.user.id;
-  const result = await project.findAll({
-    include: user,
+  const result = await Project.findAll({
+    include: User,
     where: { createdBy: userId },
   });
 
-  return res.json({
+  res.json({
     status: "success",
     data: result,
   });
-});
+};
 
-const getProjectById = catchAsync(async (req, res, next) => {
+// Get a project by its ID
+const getProjectById = async (req, res, next) => {
   const projectId = req.params.id;
-  const result = await project.findByPk(projectId, { include: user });
-  if (!result) {
-    return next(new AppError("Invalid project id", 400));
-  }
-  return res.json({
-    status: "success",
-    data: result,
-  });
-});
-
-const updateProject = catchAsync(async (req, res, next) => {
-  const userId = req.user.id;
-  const projectId = req.params.id;
-  const body = req.body;
-
-  const result = await project.findOne({
-    where: { id: projectId, createdBy: userId },
-  });
-
+  const result = await Project.findByPk(projectId, { include: User });
   if (!result) {
     return next(new AppError("Invalid project id", 400));
   }
 
-  result.title = body.title;
-  result.productImage = body.productImage;
-  result.price = body.price;
-  result.shortDescription = body.shortDescription;
-  result.description = body.description;
-  result.productUrl = body.productUrl;
-  result.category = body.category;
-  result.tags = body.tags;
-
-  const updatedResult = await result.save();
-
-  return res.json({
+  res.json({
     status: "success",
-    data: updatedResult,
+    data: result,
   });
-});
+};
 
-const deleteProject = catchAsync(async (req, res, next) => {
+// Update a project (Single query using Sequelize's update method)
+const updateProject = async (req, res, next) => {
   const userId = req.user.id;
   const projectId = req.params.id;
   const body = req.body;
 
-  const result = await project.findOne({
+  // Directly update the project using `update`
+  const [updatedCount, updatedRows] = await Project.update(body, {
+    where: { id: req.params.id, createdBy: userId },
+    returning: true, // Optional: returns the updated rows
+  });
+
+  if (updatedCount === 0) {
+    return next(new AppError(STATUS.RESOURCE_NOT_FOUND, 404));
+  }
+
+  // Return the first updated record
+  const updatedProject = updatedRows[0];
+
+  res.json({
+    status: "success",
+    data: updatedProject,
+  });
+};
+
+// Delete a project by ID
+const deleteProject = async (req, res, next) => {
+  const userId = req.user.id;
+  const projectId = req.params.id;
+
+  const result = await Project.findOne({
     where: { id: projectId, createdBy: userId },
   });
 
@@ -94,12 +80,13 @@ const deleteProject = catchAsync(async (req, res, next) => {
 
   await result.destroy();
 
-  return res.json({
+  res.json({
     status: "success",
     message: "Record deleted successfully",
   });
-});
+};
 
+// Export all controller functions
 module.exports = {
   createProject,
   getAllProject,

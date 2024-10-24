@@ -1,7 +1,6 @@
 const user = require("../db/models/user");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const { sendWhatsAppMessage } = require("../service/utils/utils.service");
 
@@ -11,91 +10,107 @@ const generateToken = (payload) => {
   });
 };
 
-const signup = catchAsync(async (req, res, next) => {
-  const body = req.body;
+// Signup function without `catchAsync`
+const signup = async (req, res, next) => {
+  try {
+    const body = req.body;
 
-  if (!["1", "2"].includes(body.userType)) {
-    throw new AppError("Invalid user Type", 400);
+    if (!["1", "2"].includes(body.userType)) {
+      throw new AppError("Invalid user Type", 400);
+    }
+
+    const newUser = await user.create({
+      userType: body.userType,
+      firstName: body.firstName,
+      lastName: body.lastName,
+      email: body.email,
+      password: body.password,
+      confirmPassword: body.confirmPassword,
+    });
+
+    if (!newUser) {
+      return next(new AppError("Failed to create the user", 400));
+    }
+
+    const result = newUser.toJSON();
+
+    delete result.password;
+    delete result.deletedAt;
+
+    result.token = generateToken({
+      id: result.id,
+    });
+
+    return res.status(201).json({
+      status: "success",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
   }
+};
 
-  const newUser = await user.create({
-    userType: body.userType,
-    firstName: body.firstName,
-    lastName: body.lastName,
-    email: body.email,
-    password: body.password,
-    confirmPassword: body.confirmPassword,
-  });
+// Login function without `catchAsync`
+const login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
 
-  if (!newUser) {
-    return next(new AppError("Failed to create the user", 400));
+    if (!email || !password) {
+      return next(new AppError("Please provide email and password", 400));
+    }
+
+    const result = await user.findOne({ where: { email } });
+    if (!result || !(await bcrypt.compare(password, result.password))) {
+      await sendWhatsAppMessage(
+        "Login Failed: Check someone is hacking your account"
+      );
+      return next(new AppError("Incorrect email or password", 401));
+    }
+
+    const token = generateToken({
+      id: result.id,
+    });
+
+    return res.json({
+      status: "success",
+      result: { ...result.dataValues, token },
+    });
+  } catch (error) {
+    next(error);
   }
+};
 
-  const result = newUser.toJSON();
+// Authentication function without `catchAsync`
+const authentication = async (req, res, next) => {
+  try {
+    // 1. get the token from headers
+    let idToken = "";
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+      // Bearer asfdasdfhjasdflkkasdf
+      idToken = req.headers.authorization.split(" ")[1];
+    }
+    if (!idToken) {
+      return next(new AppError("Please login to get access", 401));
+    }
+    // 2. token verification
+    const tokenDetail = jwt.verify(idToken, process.env.JWT_SECRET_KEY);
+    // 3. get the user detail from db and add to req object
+    const freshUser = await user.findByPk(tokenDetail.id);
 
-  delete result.password;
-  delete result.deletedAt;
-
-  result.token = generateToken({
-    id: result.id,
-  });
-
-  return res.status(201).json({
-    status: "success",
-    data: result,
-  });
-});
-
-const login = catchAsync(async (req, res, next) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return next(new AppError("Please provide email and password", 400));
+    if (!freshUser) {
+      return next(new AppError("User no longer exists", 400));
+    }
+    req.user = freshUser;
+    return next();
+  } catch (error) {
+    next(error);
   }
+};
 
-  const result = await user.findOne({ where: { email } });
-  if (!result || !(await bcrypt.compare(password, result.password))) {
-    await sendWhatsAppMessage(
-      "Login Failed: Check someone is hacking your account"
-    );
-    return next(new AppError("Incorrect email or password", 401));
-  }
-
-  const token = generateToken({
-    id: result.id,
-  });
-
-  return res.json({
-    status: "success",
-    result: { ...result.dataValues, token },
-  });
-});
-
-const authentication = catchAsync(async (req, res, next) => {
-  // 1. get the token from headers
-  let idToken = "";
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    // Bearer asfdasdfhjasdflkkasdf
-    idToken = req.headers.authorization.split(" ")[1];
-  }
-  if (!idToken) {
-    return next(new AppError("Please login to get access", 401));
-  }
-  // 2. token verification
-  const tokenDetail = jwt.verify(idToken, process.env.JWT_SECRET_KEY);
-  // 3. get the user detail from db and add to req object
-  const freshUser = await user.findByPk(tokenDetail.id);
-
-  if (!freshUser) {
-    return next(new AppError("User no longer exists", 400));
-  }
-  req.user = freshUser;
-  return next();
-});
-
+// RestrictTo function remains unchanged
 const restrictTo = (...userType) => {
   const checkPermission = (req, res, next) => {
     if (!userType.includes(req.user.userType)) {
